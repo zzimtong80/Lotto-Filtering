@@ -22,7 +22,6 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
 
-  // 분석 함수
   const analyzeNewRounds = useCallback(async (dataToAnalyze, startRound, endRound, existingResults) => {
     if (!dataToAnalyze.length) {
       console.log('No data to analyze.');
@@ -57,7 +56,6 @@ function App() {
     });
   }, []);
 
-  // 초기 데이터 로드 (분석 제외)
   const loadInitialData = useCallback(async () => {
     console.log('Starting initial load...');
     let existingResults = [];
@@ -66,7 +64,7 @@ function App() {
 
     try {
       const historyResponse = await fetch('/history_results.json');
-      console.log('Fetch status for history_results.json:', historyResponse.status);
+      console.log('Fetch status:', historyResponse.status);
       if (historyResponse.ok) {
         existingResults = await historyResponse.json();
         setHistoryResults(existingResults);
@@ -100,17 +98,20 @@ function App() {
     loadInitialData();
   }, [loadInitialData]);
 
-  // 분석 버튼 핸들러
   const handleAnalyzeHistory = useCallback(async () => {
+    if (isAnalyzed && historyResults.length > 0) {
+      console.log('History already analyzed, skipping.');
+      setShowHistory(true);
+      return;
+    }
+
     const latestExistingRound = historyResults.length > 0 ? Math.max(...historyResults.map(r => r.round)) : 0;
     const latestRound = Math.max(...data.map(d => d.회차));
     if (latestExistingRound < latestRound || historyResults.length === 0) {
       await analyzeNewRounds(data, latestExistingRound, latestRound, historyResults);
-    } else {
-      console.log('History is up-to-date, no analysis needed.');
     }
     setShowHistory(true);
-  }, [data, historyResults, analyzeNewRounds]);
+  }, [data, historyResults, isAnalyzed, analyzeNewRounds]);
 
   useEffect(() => {
     if (selectedRound && data.length > 0) {
@@ -274,17 +275,8 @@ function App() {
     setCurrentPage(0);
   }, [predictions]);
 
-  const calculateAC = (numbers) => {
-    const sortedNumbers = [...numbers].sort((a, b) => a - b);
-    const differences = new Set();
-    for (let i = 0; i < sortedNumbers.length - 1; i++) {
-      for (let j = i + 1; j < sortedNumbers.length; j++) {
-        const diff = sortedNumbers[j] - sortedNumbers[i];
-        differences.add(diff);
-      }
-    }
-    return Math.max(0, differences.size - 5);
-  };
+  // calculateAC는 사용하지 않으므로 주석 처리
+  // const calculateAC = (numbers) => { ... };
 
   const loadHistoryResults = () => {
     fetch('/history_results.json')
