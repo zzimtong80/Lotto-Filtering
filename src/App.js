@@ -22,7 +22,7 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
 
-  // 분석 함수 수정: 다운로드 제거
+  // 분석 함수
   const analyzeNewRounds = useCallback(async (dataToAnalyze, startRound, endRound, existingResults) => {
     if (!dataToAnalyze.length) {
       console.log('No data to analyze.');
@@ -40,7 +40,7 @@ function App() {
       worker.onmessage = (e) => {
         const newResults = e.data;
         const updatedResults = [...existingResults, ...newResults];
-        setHistoryResults(updatedResults); // 상태에 저장
+        setHistoryResults(updatedResults);
         setIsAnalyzed(true);
         setIsAnalyzing(false);
         console.log('History results updated:', updatedResults);
@@ -57,22 +57,23 @@ function App() {
     });
   }, []);
 
-  // 초기 데이터 로드 및 분석
-  const loadInitialDataAndAnalyze = useCallback(async () => {
+  // 초기 데이터 로드 (분석 제외)
+  const loadInitialData = useCallback(async () => {
     console.log('Starting initial load...');
     let existingResults = [];
     let latestRound = 0;
     let dataToAnalyze = [];
 
-    // 1. 기존 결과 로드
     try {
       const historyResponse = await fetch('/history_results.json');
+      console.log('Fetch status for history_results.json:', historyResponse.status);
       if (historyResponse.ok) {
         existingResults = await historyResponse.json();
         setHistoryResults(existingResults);
+        setIsAnalyzed(true);
         console.log('Loaded existing history results:', existingResults);
       } else {
-        console.log('history_results.json not found (status:', historyResponse.status, '). Initializing empty results.');
+        console.log('history_results.json not found (status:', historyResponse.status, ')');
         existingResults = [];
       }
     } catch (error) {
@@ -80,7 +81,6 @@ function App() {
       existingResults = [];
     }
 
-    // 2. 데이터 로드
     try {
       const response = await axios.get('/data.json');
       dataToAnalyze = response.data;
@@ -93,24 +93,24 @@ function App() {
       return;
     }
 
-    // 3. 최신 회차 비교 및 분석 필요 여부 결정
-    const latestExistingRound = existingResults.length > 0 ? Math.max(...existingResults.map(r => r.round)) : 0;
-    console.log('Comparing rounds:', { latestExistingRound, latestRound });
-
-    if (latestExistingRound >= latestRound && existingResults.length > 0) {
-      setIsAnalyzed(true);
-      console.log('History is up-to-date and non-empty, skipping analysis.');
-    } else if (!isAnalyzed) {
-      console.log('New data detected or history empty, starting analysis...');
-      await analyzeNewRounds(dataToAnalyze, latestExistingRound, latestRound, existingResults);
-    }
-
-    console.log('Initial load and analysis complete:', { isAnalyzed, historyResultsLength: existingResults.length });
-  }, [isAnalyzed, analyzeNewRounds]);
+    console.log('Initial load complete:', { historyResultsLength: existingResults.length });
+  }, []);
 
   useEffect(() => {
-    loadInitialDataAndAnalyze();
-  }, [loadInitialDataAndAnalyze]);
+    loadInitialData();
+  }, [loadInitialData]);
+
+  // 분석 버튼 핸들러
+  const handleAnalyzeHistory = useCallback(async () => {
+    const latestExistingRound = historyResults.length > 0 ? Math.max(...historyResults.map(r => r.round)) : 0;
+    const latestRound = Math.max(...data.map(d => d.회차));
+    if (latestExistingRound < latestRound || historyResults.length === 0) {
+      await analyzeNewRounds(data, latestExistingRound, latestRound, historyResults);
+    } else {
+      console.log('History is up-to-date, no analysis needed.');
+    }
+    setShowHistory(true);
+  }, [data, historyResults, analyzeNewRounds]);
 
   useEffect(() => {
     if (selectedRound && data.length > 0) {
@@ -311,7 +311,10 @@ function App() {
       <DuplicateTable latestData={latestData} type="oddEven" />
       <DuplicateTable latestData={latestData} type="range" />
       <button onClick={() => setShowHistory(true)} disabled={isAnalyzing}>
-        {isAnalyzing ? '분석 중...' : '역대 결과'}
+        역대 결과 보기
+      </button>
+      <button onClick={handleAnalyzeHistory} disabled={isAnalyzing}>
+        {isAnalyzing ? '분석 중...' : '역대 결과 분석'}
       </button>
       <div className="prediction-section">
         <h3>📌 예측 번호</h3>
