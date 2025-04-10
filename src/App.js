@@ -22,7 +22,7 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
 
-  // 분석 함수 먼저 정의
+  // 분석 함수 수정: 다운로드 제거
   const analyzeNewRounds = useCallback(async (dataToAnalyze, startRound, endRound, existingResults) => {
     if (!dataToAnalyze.length) {
       console.log('No data to analyze.');
@@ -40,13 +40,7 @@ function App() {
       worker.onmessage = (e) => {
         const newResults = e.data;
         const updatedResults = [...existingResults, ...newResults];
-        const jsonStr = JSON.stringify(updatedResults, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'history_results.json';
-        link.click();
-        setHistoryResults(updatedResults);
+        setHistoryResults(updatedResults); // 상태에 저장
         setIsAnalyzed(true);
         setIsAnalyzing(false);
         console.log('History results updated:', updatedResults);
@@ -280,7 +274,6 @@ function App() {
     setCurrentPage(0);
   }, [predictions]);
 
-  // eslint-disable-next-line no-unused-vars
   const calculateAC = (numbers) => {
     const sortedNumbers = [...numbers].sort((a, b) => a - b);
     const differences = new Set();
