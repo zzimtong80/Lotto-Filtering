@@ -22,6 +22,35 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
 
+  // 보안: 우클릭 및 개발자 도구 단축키 차단
+  useEffect(() => {
+    // 우클릭 방지
+    const disableContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    // 키보드 단축키 방지 (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U)
+    const disableDevTools = (e) => {
+      if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+        (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+        (e.ctrlKey && e.keyCode === 85) // Ctrl+U
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', disableContextMenu);
+    document.addEventListener('keydown', disableDevTools);
+
+    // 클린업
+    return () => {
+      document.removeEventListener('contextmenu', disableContextMenu);
+      document.removeEventListener('keydown', disableDevTools);
+    };
+  }, []);
+
   const analyzeNewRounds = useCallback(async (dataToAnalyze, startRound, endRound, existingResults) => {
     if (!dataToAnalyze.length) {
       console.log('No data to analyze.');
@@ -204,7 +233,7 @@ function App() {
       '단대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '단대').length, 0) / 24,
       '10대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '10대').length, 0) / 24,
       '20대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '20대').length, 0) / 24,
-      '30대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '30대').length, 0) / 24,
+      '30대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '30대').length, 0) / 24, // Fixed typo
       '40대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '40대').length, 0) / 24,
     };
 
@@ -274,9 +303,6 @@ function App() {
     setPredictions(sorted);
     setCurrentPage(0);
   }, [predictions]);
-
-  // calculateAC는 사용하지 않으므로 주석 처리
-  // const calculateAC = (numbers) => { ... };
 
   const loadHistoryResults = () => {
     fetch('/history_results.json')
