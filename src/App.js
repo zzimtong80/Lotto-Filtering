@@ -24,18 +24,16 @@ function App() {
 
   // 보안: 우클릭 및 개발자 도구 단축키 차단
   useEffect(() => {
-    // 우클릭 방지
     const disableContextMenu = (e) => {
       e.preventDefault();
     };
 
-    // 키보드 단축키 방지 (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U)
     const disableDevTools = (e) => {
       if (
-        e.keyCode === 123 || // F12
-        (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
-        (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
-        (e.ctrlKey && e.keyCode === 85) // Ctrl+U
+        e.keyCode === 123 ||
+        (e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
+        (e.ctrlKey && e.shiftKey && e.keyCode === 74) ||
+        (e.ctrlKey && e.keyCode === 85)
       ) {
         e.preventDefault();
       }
@@ -44,7 +42,6 @@ function App() {
     document.addEventListener('contextmenu', disableContextMenu);
     document.addEventListener('keydown', disableDevTools);
 
-    // 클린업
     return () => {
       document.removeEventListener('contextmenu', disableContextMenu);
       document.removeEventListener('keydown', disableDevTools);
@@ -184,6 +181,17 @@ function App() {
     return Math.min(100, Math.floor((freqScore + oddEvenMatch + rangeMatch) / 3));
   }, []);
 
+  // AC 값 계산 함수
+  const calculateAC = (numbers) => {
+    const diffs = new Set();
+    for (let i = 0; i < numbers.length; i++) {
+      for (let j = i + 1; j < numbers.length; j++) {
+        diffs.add(Math.abs(numbers[i] - numbers[j]));
+      }
+    }
+    return Math.max(0, diffs.size - 5);
+  };
+
   const generatePredictions = useCallback(() => {
     if (!data.length || !latestData.length) {
       setPredictions([]);
@@ -233,7 +241,7 @@ function App() {
       '단대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '단대').length, 0) / 24,
       '10대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '10대').length, 0) / 24,
       '20대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '20대').length, 0) / 24,
-      '30대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '30대').length, 0) / 24, // Fixed typo
+      '30대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '30대').length, 0) / 24,
       '40대': rangeHistory.reduce((sum, row) => sum + row.filter(r => r === '40대').length, 0) / 24,
     };
 
@@ -251,14 +259,15 @@ function App() {
       const oddCount = sortedComb.filter(n => n % 2 === 1).length;
       const lowCount = sortedComb.filter(n => n <= 22).length;
       const matchPercentage = calculateMatchPercentage(sortedComb, predictedOddEven, predictedLowCount, predictedCountDist, predictedRangeDist, numberCounts);
+      const acValue = calculateAC(sortedComb);
       if (matchPercentage >= 30) {
-        predictionsSet.add(JSON.stringify([...sortedComb, totalSum, `${oddCount}:${6 - oddCount}`, `${lowCount}:${6 - lowCount}`, `${matchPercentage}%`]));
+        predictionsSet.add(JSON.stringify([...sortedComb, acValue, totalSum, `${oddCount}:${6 - oddCount}`, `${lowCount}:${6 - lowCount}`, `${matchPercentage}%`]));
       }
     }
 
     const newPredictions = Array.from(predictionsSet)
       .map(JSON.parse)
-      .sort((a, b) => parseFloat(b[9]) - parseFloat(a[9]));
+      .sort((a, b) => parseFloat(b[10]) - parseFloat(a[10]));
     setPredictions(newPredictions);
     setCurrentPage(0);
     console.log('Predictions generated:', newPredictions);
@@ -281,13 +290,16 @@ function App() {
           return 0;
         });
         break;
-      case 'totalSum':
+      case 'ac':
         sorted.sort((a, b) => ascending ? a[6] - b[6] : b[6] - a[6]);
+        break;
+      case 'totalSum':
+        sorted.sort((a, b) => ascending ? a[7] - b[7] : b[7] - a[7]);
         break;
       case 'matchPercentage':
         sorted.sort((a, b) => {
-          const aMatch = parseFloat(a[9]);
-          const bMatch = parseFloat(b[9]);
+          const aMatch = parseFloat(a[10]);
+          const bMatch = parseFloat(b[10]);
           return ascending ? aMatch - bMatch : bMatch - aMatch;
         });
         break;

@@ -70,13 +70,16 @@ function PredictionTable({
             return 0;
           });
           break;
-        case 'totalSum':
+        case 'ac':
           sortedRecommended.sort((a, b) => ascending ? a[6] - b[6] : b[6] - a[6]);
+          break;
+        case 'totalSum':
+          sortedRecommended.sort((a, b) => ascending ? a[7] - b[7] : b[7] - a[7]);
           break;
         case 'matchPercentage':
           sortedRecommended.sort((a, b) => {
-            const aMatch = parseFloat(a[9]);
-            const bMatch = parseFloat(b[9]);
+            const aMatch = parseFloat(a[10]);
+            const bMatch = parseFloat(b[10]);
             return ascending ? aMatch - bMatch : bMatch - aMatch;
           });
           break;
@@ -101,13 +104,16 @@ function PredictionTable({
             return 0;
           });
           break;
-        case 'totalSum':
+        case 'ac':
           sortedFiltered.sort((a, b) => ascending ? a[6] - b[6] : b[6] - a[6]);
+          break;
+        case 'totalSum':
+          sortedFiltered.sort((a, b) => ascending ? a[7] - b[7] : b[7] - a[7]);
           break;
         case 'matchPercentage':
           sortedFiltered.sort((a, b) => {
-            const aMatch = parseFloat(a[9]);
-            const bMatch = parseFloat(b[9]);
+            const aMatch = parseFloat(a[10]);
+            const bMatch = parseFloat(b[10]);
             return ascending ? aMatch - bMatch : bMatch - aMatch;
           });
           break;
@@ -194,24 +200,21 @@ function PredictionTable({
           rank = '5등';
         }
 
-        // 낙첨 제외
         if (rank) {
           return [...pred, rank];
         }
         return null;
       })
-      .filter(pred => pred !== null); // 낙첨 제거
+      .filter(pred => pred !== null);
 
-    // 등수 순으로 정렬 (1등 > 2등 > 3등 > 4등 > 5등)
     const rankOrder = { '1등': 1, '2등': 2, '3등': 3, '4등': 4, '5등': 5 };
-    newPredictions.sort((a, b) => rankOrder[a[10]] - rankOrder[b[10]]);
+    newPredictions.sort((a, b) => rankOrder[a[11]] - rankOrder[b[11]]);
 
     setRankedPredictions(newPredictions);
     setShowRanks(true);
-    setCurrentPage(0); // 첫 페이지로 리셋
+    setCurrentPage(0);
   };
 
-  // 표시할 예측: 등수 표시 시 rankedPredictions 사용
   const displayedPredictions = showRanks ? rankedPredictions : (recommendedCombinations.length > 0 ? recommendedCombinations : filteredPredictions);
   const totalItems = displayedPredictions.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -264,6 +267,8 @@ function PredictionTable({
           <div className="sort-buttons" style={{ marginBottom: '20px' }}>
             <button onClick={() => handleSort('combination', true)}>조합순 ↑</button>
             <button onClick={() => handleSort('combination', false)}>조합순 ↓</button>
+            <button onClick={() => handleSort('ac', true)}>AC순 ↑</button>
+            <button onClick={() => handleSort('ac', false)}>AC순 ↓</button>
             <button onClick={() => handleSort('totalSum', true)}>총합순 ↑</button>
             <button onClick={() => handleSort('totalSum', false)}>총합순 ↓</button>
             <button onClick={() => handleSort('matchPercentage', true)}>일치도순 ↑</button>
@@ -297,6 +302,7 @@ function PredictionTable({
             <th>번호4</th>
             <th>번호5</th>
             <th>번호6</th>
+            <th>AC</th>
             <th>총합</th>
             <th>홀짝 비율</th>
             <th>저고 비율</th>
@@ -319,12 +325,13 @@ function PredictionTable({
                 <td>{pred[7]}</td>
                 <td>{pred[8]}</td>
                 <td>{pred[9]}</td>
-                {showRanks && showFilters && onClose && <td>{pred[10]}</td>}
+                <td>{pred[10]}</td>
+                {showRanks && showFilters && onClose && <td>{pred[11]}</td>}
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={includeRank ? 12 : 11}>데이터 없음</td>
+              <td colSpan={includeRank ? 13 : 12}>데이터 없음</td>
             </tr>
           )}
         </tbody>
