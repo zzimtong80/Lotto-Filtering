@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Filters from './Filters';
+import './PredictionTable.css';
 
 function PredictionTable({
   predictions,
@@ -18,12 +19,18 @@ function PredictionTable({
   const [filteredPredictions, setFilteredPredictions] = useState(predictions);
   const [recommendedCombinations, setRecommendedCombinations] = useState([]);
   const [isFiltered, setIsFiltered] = useState(false);
-  const [pageInput, setPageInput] = useState(''); // 페이지 입력값 상태 추가
+  const [pageInput, setPageInput] = useState('');
+  const [inputNumbers, setInputNumbers] = useState(['', '', '', '', '', '']);
+  const [bonusNumber, setBonusNumber] = useState('');
+  const [rankedPredictions, setRankedPredictions] = useState(predictions);
+  const [showRanks, setShowRanks] = useState(false);
   const itemsPerPage = 10;
 
   useEffect(() => {
     if (!isFiltered) {
       setFilteredPredictions(predictions);
+      setRankedPredictions(predictions);
+      setShowRanks(false);
     }
   }, [predictions, isFiltered]);
 
@@ -46,6 +53,8 @@ function PredictionTable({
     setRecommendedCombinations([]);
     setIsFiltered(false);
     setCurrentPage(0);
+    setRankedPredictions(predictions);
+    setShowRanks(false);
   };
 
   const handleSort = (criteria, ascending) => {
@@ -112,11 +121,98 @@ function PredictionTable({
           break;
       }
       setFilteredPredictions(sortedFiltered);
+      setRankedPredictions(sortedFiltered);
     }
     setCurrentPage(0);
   };
 
-  const displayedPredictions = recommendedCombinations.length > 0 ? recommendedCombinations : filteredPredictions;
+  const handleInputChange = (index, value) => {
+    const num = value.replace(/[^0-9]/g, '');
+    if (num === '' || (parseInt(num) >= 1 && parseInt(num) <= 45)) {
+      const newInputs = [...inputNumbers];
+      newInputs[index] = num;
+      setInputNumbers(newInputs);
+    }
+  };
+
+  const handleBonusChange = (value) => {
+    const num = value.replace(/[^0-9]/g, '');
+    if (num === '' || (parseInt(num) >= 1 && parseInt(num) <= 45)) {
+      setBonusNumber(num);
+    }
+  };
+
+  const searchCombination = () => {
+    const nums = inputNumbers.map(n => parseInt(n)).filter(n => !isNaN(n));
+    if (nums.length !== 6) {
+      alert('6개의 번호를 모두 입력해주세요.');
+      return;
+    }
+    const sortedNums = nums.sort((a, b) => a - b);
+    const target = JSON.stringify(sortedNums);
+
+    const source = recommendedCombinations.length > 0 ? recommendedCombinations : filteredPredictions;
+    const index = source.findIndex(pred => {
+      const predNums = pred.slice(0, 6).sort((a, b) => a - b);
+      return JSON.stringify(predNums) === target;
+    });
+
+    if (index === -1) {
+      alert('해당 조합을 찾을 수 없습니다.');
+      return;
+    }
+
+    const targetPage = Math.floor(index / itemsPerPage);
+    setCurrentPage(targetPage);
+  };
+
+  const calculateRanks = () => {
+    const nums = inputNumbers.map(n => parseInt(n)).filter(n => !isNaN(n));
+    const bonus = parseInt(bonusNumber);
+    if (nums.length !== 6 || isNaN(bonus)) {
+      alert('6개의 번호와 보너스 번호를 모두 입력해주세요.');
+      return;
+    }
+
+    const winningNums = nums.sort((a, b) => a - b);
+    const source = recommendedCombinations.length > 0 ? recommendedCombinations : filteredPredictions;
+    const newPredictions = source
+      .map(pred => {
+        const predNums = pred.slice(0, 6).sort((a, b) => a - b);
+        const matches = predNums.filter(n => winningNums.includes(n)).length;
+        let rank = null;
+
+        if (matches === 6) {
+          rank = '1등';
+        } else if (matches === 5 && predNums.includes(bonus)) {
+          rank = '2등';
+        } else if (matches === 5) {
+          rank = '3등';
+        } else if (matches === 4) {
+          rank = '4등';
+        } else if (matches === 3) {
+          rank = '5등';
+        }
+
+        // 낙첨 제외
+        if (rank) {
+          return [...pred, rank];
+        }
+        return null;
+      })
+      .filter(pred => pred !== null); // 낙첨 제거
+
+    // 등수 순으로 정렬 (1등 > 2등 > 3등 > 4등 > 5등)
+    const rankOrder = { '1등': 1, '2등': 2, '3등': 3, '4등': 4, '5등': 5 };
+    newPredictions.sort((a, b) => rankOrder[a[10]] - rankOrder[b[10]]);
+
+    setRankedPredictions(newPredictions);
+    setShowRanks(true);
+    setCurrentPage(0); // 첫 페이지로 리셋
+  };
+
+  // 표시할 예측: 등수 표시 시 rankedPredictions 사용
+  const displayedPredictions = showRanks ? rankedPredictions : (recommendedCombinations.length > 0 ? recommendedCombinations : filteredPredictions);
   const totalItems = displayedPredictions.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = currentPage * itemsPerPage;
@@ -130,11 +226,11 @@ function PredictionTable({
 
   const handlePageInput = (e) => {
     if (e.key === 'Enter') {
-      const pageNum = parseInt(pageInput) - 1; // 사용자 입력은 1부터 시작, 내부는 0부터
+      const pageNum = parseInt(pageInput) - 1;
       if (!isNaN(pageNum) && pageNum >= 0 && pageNum < totalPages) {
         setCurrentPage(pageNum);
       }
-      setPageInput(''); // 입력 후 초기화
+      setPageInput('');
     }
   };
 
@@ -205,6 +301,7 @@ function PredictionTable({
             <th>홀짝 비율</th>
             <th>저고 비율</th>
             <th>패턴 일치도</th>
+            {showRanks && showFilters && onClose && <th>등수</th>}
           </tr>
         </thead>
         <tbody>
@@ -222,11 +319,12 @@ function PredictionTable({
                 <td>{pred[7]}</td>
                 <td>{pred[8]}</td>
                 <td>{pred[9]}</td>
+                {showRanks && showFilters && onClose && <td>{pred[10]}</td>}
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={includeRank ? 11 : 10}>데이터 없음</td>
+              <td colSpan={includeRank ? 12 : 11}>데이터 없음</td>
             </tr>
           )}
         </tbody>
@@ -252,6 +350,40 @@ function PredictionTable({
           />
         </div>
       </div>
+      {showFilters && onClose && (
+        <div className="number-inputs" style={{ marginTop: '20px', textAlign: 'center' }}>
+          <h4>번호 입력</h4>
+          <div className="input-row" style={{ display: 'flex', justifyContent: 'center' }}>
+            {inputNumbers.map((num, index) => (
+              <input
+                key={index}
+                type="text"
+                value={num}
+                onChange={e => handleInputChange(index, e.target.value)}
+                placeholder={`번호 ${index + 1}`}
+                maxLength="2"
+                style={{ width: '50px', margin: '5px', textAlign: 'center' }}
+              />
+            ))}
+            <input
+              type="text"
+              value={bonusNumber}
+              onChange={e => handleBonusChange(e.target.value)}
+              placeholder="보너스"
+              maxLength="2"
+              style={{ width: '50px', margin: '5px', textAlign: 'center' }}
+            />
+          </div>
+          <div className="action-buttons" style={{ marginTop: '10px' }}>
+            <button onClick={searchCombination} style={{ margin: '0 10px', padding: '5px 10px' }}>
+              검색
+            </button>
+            <button onClick={calculateRanks} style={{ margin: '0 10px', padding: '5px 10px' }}>
+              등수
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
