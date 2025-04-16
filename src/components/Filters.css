@@ -1,67 +1,111 @@
 .filters {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-bottom: 20px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.filters h4 {
+  margin: 0 0 15px;
+  font-size: 1.2em;
+  text-align: center;
 }
 
 .filter-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
   align-items: center;
-  gap: 10px;
-  width: 100%;
 }
 
 .filter-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  flex: 1;
+  gap: 10px;
 }
 
 .filter-item.full-width {
-  flex: unset;
-  width: 100%;
+  flex: 1;
 }
 
 .filter-item label {
-  margin-right: 5px;
-  white-space: nowrap;
+  font-size: 0.9em;
+  min-width: 80px;
 }
 
 .filter-item input,
 .filter-item select {
   padding: 5px;
-  width: 60px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9em;
 }
 
-.filter-item input[type="number"] {
-  width: 50px;
+.filter-item input[type="number"],
+.filter-item input[type="text"] {
+  width: 100px;
 }
 
-/* "저고 비율"과 "총합 범위"을 한 줄에 배치 */
-.filter-item.low-high-total {
+.filter-item input[type="number"]::-webkit-inner-spin-button,
+.filter-item input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.ranges-container {
   display: flex;
-  gap: 15px; /* 저고 비율과 총합 범위 간 간격 */
-  flex: 2; /* 공간을 더 차지하도록 조정 */
-}
-
-.filter-item.low-high-total .sub-item {
-  display: flex;
-  align-items: center;
   gap: 5px;
+  flex-wrap: wrap;
 }
 
-.filter-row:nth-child(2) select {
-  width: calc(100% / 6 - 10px); /* 번호대 선택 폭 조정 (기존 3번째에서 2번째로 변경) */
+.ranges-container select {
+  width: 80px;
 }
 
-.filter-row:last-child {
-  justify-content: center; /* 검색, 초기화 버튼 중앙 정렬 */
-  gap: 20px; /* 버튼 간 간격 */
+.filter-row.buttons {
+  justify-content: center;
+  gap: 20px;
 }
 
 .filter-row button {
-  padding: 5px 20px;
-  width: 100px;
+  padding: 8px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.filter-row button:hover {
+  background: #0056b3;
+}
+
+.filter-row button:last-child {
+  background: #6c757d;
+}
+
+.filter-row button:last-child:hover {
+  background: #5a6268;
+}
+
+@media (max-width: 600px) {
+  .filter-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+
+  .filter-item input,
+  .filter-item select {
+    width: 100%;
+  }
+
+  .ranges-container select {
+    width: 100%;
+  }
 }
