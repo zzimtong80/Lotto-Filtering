@@ -1,8 +1,14 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 
 function NumberCheck({ usedNumbers, setUsedNumbers, excludedNumbers, setExcludedNumbers, latestData, onClose }) {
   const safeLatestData = latestData || [];
-  const allNumbers = safeLatestData.flatMap(d => [d.번호1, d.번호2, d.번호3, d.번호4, d.번호5, d.번호6]);
+
+  // 모든 번호 추출
+  const allNumbers = useMemo(() => {
+    return safeLatestData.flatMap(d => [d.번호1, d.번호2, d.번호3, d.번호4, d.번호5, d.번호6]);
+  }, [safeLatestData]);
+
+  // 숫자 빈도 계산
   const numberCounts = useMemo(() => {
     const counts = allNumbers.reduce((acc, num) => {
       acc[num] = (acc[num] || 0) + 1;
@@ -12,32 +18,62 @@ function NumberCheck({ usedNumbers, setUsedNumbers, excludedNumbers, setExcluded
     return counts;
   }, [allNumbers]);
 
-  useEffect(() => {
+  // 사용된 숫자, 제외된 숫자, 미출현 숫자 계산
+  const computedNumbers = useMemo(() => {
     const used = [];
     const excluded = [];
-    const notAppeared = Array.from({ length: 45 }, (_, i) => i + 1).filter(num => !numberCounts[num]);
+    const notAppeared = [];
+
+    // 1~45 순회
     for (let num = 1; num <= 45; num++) {
       const count = numberCounts[num] || 0;
-      if (count >= 1 && count <= 4) used.push(num);
-      else excluded.push(num);
+      if (count >= 1 && count <= 4) {
+        used.push(num);
+      } else {
+        excluded.push(num);
+      }
+      if (count === 0) {
+        notAppeared.push(num);
+      }
     }
-    notAppeared.forEach(num => {
-      if (!excluded.includes(num)) excluded.push(num);
-      if (used.includes(num)) used.splice(used.indexOf(num), 1);
-    });
-    setUsedNumbers(used.sort((a, b) => a - b));
-    setExcludedNumbers(excluded.sort((a, b) => a - b));
+
+    // 정렬
+    used.sort((a, b) => a - b);
+    excluded.sort((a, b) => a - b);
+    notAppeared.sort((a, b) => a - b);
+
     console.log("Used Numbers:", used);
     console.log("Excluded Numbers:", excluded);
     console.log("Not Appeared:", notAppeared);
-  }, [numberCounts, setUsedNumbers, setExcludedNumbers]);
 
-  const countGroups = {};
-  for (let num = 1; num <= 45; num++) {
-    const count = numberCounts[num] || 0;
-    if (count > 0) countGroups[count] = [...(countGroups[count] || []), num];
+    return { used, excluded, notAppeared };
+  }, [numberCounts]);
+
+  // 상태 업데이트 (변경 시에만)
+  if (usedNumbers.join() !== computedNumbers.used.join()) {
+    setUsedNumbers(computedNumbers.used);
   }
-  const notAppeared = Array.from({ length: 45 }, (_, i) => i + 1).filter(num => !numberCounts[num]);
+  if (excludedNumbers.join() !== computedNumbers.excluded.join()) {
+    setExcludedNumbers(computedNumbers.excluded);
+  }
+
+  // 중복 횟수별 그룹
+  const countGroups = useMemo(() => {
+    const groups = {};
+    for (let num = 1; num <= 45; num++) {
+      const count = numberCounts[num] || 0;
+      if (count > 0) {
+        groups[count] = [...(groups[count] || []), num].sort((a, b) => a - b);
+      }
+    }
+    return groups;
+  }, [numberCounts]);
+
+  // 닫기 핸들러
+  const handleClose = useCallback(() => {
+    console.log("Closing NumberCheck");
+    onClose();
+  }, [onClose]);
 
   const ranges = [
     { name: '단번대 (1~9)', start: 1, end: 9 },
@@ -53,17 +89,17 @@ function NumberCheck({ usedNumbers, setUsedNumbers, excludedNumbers, setExcluded
       style={{
         position: 'fixed',
         top: '10%',
-        left: '25%', // 중앙 정렬 (80% → 40%로 줄이면 25%로 이동)
-        width: '40%', // 기존 80%에서 반으로 줄임
+        left: '25%',
+        width: '40%',
         height: '80%',
         background: '#fff',
         zIndex: 1000,
         padding: '20px',
         overflowY: 'auto',
-        border: '2px solid #000', // 테두리 추가
+        border: '2px solid #000',
       }}
     >
-      <button style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={onClose}>
+      <button style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={handleClose}>
         닫기
       </button>
       <div>
@@ -73,27 +109,35 @@ function NumberCheck({ usedNumbers, setUsedNumbers, excludedNumbers, setExcluded
             .sort((a, b) => b - a)
             .map(count => (
               <p key={count}>
-                {count}회: {countGroups[count].sort((a, b) => a - b).join(', ')} 개수: {countGroups[count].length}개
+                {count}회: {countGroups[count].join(', ')} 개수: {countGroups[count].length}개
               </p>
             ))
         ) : (
           <p>데이터 없음</p>
         )}
         <h3>미출현 숫자들:</h3>
-        <p>{notAppeared.length ? `${notAppeared.join(', ')} 개수: ${notAppeared.length}` : '없음'}</p>
-        <h3>📌 사용된 숫자 ({usedNumbers.length}개):</h3>
+        <p>
+          {computedNumbers.notAppeared.length
+            ? `${computedNumbers.notAppeared.join(', ')} 개수: ${computedNumbers.notAppeared.length}`
+            : '없음'}
+        </p>
+        <h3>📌 사용된 숫자 ({computedNumbers.used.length}개):</h3>
         <div>
-          {usedNumbers.length ? (
+          {computedNumbers.used.length ? (
             ranges.map(range => {
-              const nums = usedNumbers.filter(n => n >= range.start && n <= range.end);
-              return <p key={range.name}>{range.name}: {nums.length ? nums.join(', ') : '없음'}</p>;
+              const nums = computedNumbers.used.filter(n => n >= range.start && n <= range.end);
+              return (
+                <p key={range.name}>
+                  {range.name}: {nums.length ? nums.join(', ') : '없음'}
+                </p>
+              );
             })
           ) : (
             <p>없음</p>
           )}
         </div>
-        <h3>❌ 제외된 숫자 ({excludedNumbers.length}개):</h3>
-        <p>{excludedNumbers.length ? excludedNumbers.join(', ') : '없음'}</p>
+        <h3>❌ 제외된 숫자 ({computedNumbers.excluded.length}개):</h3>
+        <p>{computedNumbers.excluded.length ? computedNumbers.excluded.join(', ') : '없음'}</p>
       </div>
     </div>
   );
