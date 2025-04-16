@@ -1,7 +1,8 @@
 import React, { useMemo, useCallback } from 'react';
 
 function NumberCheck({ usedNumbers, setUsedNumbers, excludedNumbers, setExcludedNumbers, latestData, onClose }) {
-  const safeLatestData = latestData || [];
+  // safeLatestData를 useMemo로 래핑
+  const safeLatestData = useMemo(() => latestData || [], [latestData]);
 
   // 모든 번호 추출
   const allNumbers = useMemo(() => {
