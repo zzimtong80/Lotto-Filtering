@@ -247,8 +247,24 @@ function App() {
 
     const predictionsSet = new Set();
     const combList = combinations(validNumbers, 6);
+    console.log(`Total combinations generated: ${combList.length}`);
     for (const comb of combList) {
       const sortedComb = comb.sort((a, b) => a - b);
+      
+      // 데이터 형식 검증
+      if (!sortedComb.every(num => typeof num === 'number' && Number.isInteger(num))) {
+        console.warn(`Invalid combination format: ${sortedComb}`);
+        continue;
+      }
+
+      // 홀짝 및 저고 비율 필터링 (루프 초기에 배치하여 성능 최적화)
+      const oddCount = sortedComb.filter(n => n % 2 === 1).length;
+      const lowCount = sortedComb.filter(n => n >= 1 && n <= 22).length;
+      if (oddCount === 6 || oddCount === 0 || lowCount === 6 || lowCount === 0) {
+        console.log(`Filtered out combination: ${sortedComb} (odd:${oddCount}, low:${lowCount})`);
+        continue;
+      }
+
       const totalSum = sortedComb.reduce((a, b) => a + b, 0);
       if (totalSum < 80 || totalSum > 170) continue;
       const consecutiveCount = sortedComb.reduce((count, num, i) => i > 0 && num - sortedComb[i - 1] === 1 ? count + 1 : count, 0);
@@ -256,8 +272,7 @@ function App() {
       const gaps = sortedComb.slice(1).map((num, i) => num - sortedComb[i]);
       const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
       if (avgGap < 5 || avgGap > 8) continue;
-      const oddCount = sortedComb.filter(n => n % 2 === 1).length;
-      const lowCount = sortedComb.filter(n => n <= 22).length;
+
       const matchPercentage = calculateMatchPercentage(sortedComb, predictedOddEven, predictedLowCount, predictedCountDist, predictedRangeDist, numberCounts);
       const acValue = calculateAC(sortedComb);
       if (matchPercentage >= 30) {
@@ -268,9 +283,18 @@ function App() {
     const newPredictions = Array.from(predictionsSet)
       .map(JSON.parse)
       .sort((a, b) => parseFloat(b[10]) - parseFloat(a[10]));
+    
+    // 최종 예측 결과 검증
+    newPredictions.forEach(pred => {
+      const oddCount = pred.slice(0, 6).filter(n => n % 2 === 1).length;
+      if (oddCount === 6 || oddCount === 0) {
+        console.warn(`Invalid prediction slipped through: ${pred.slice(0, 6)} (odd:${oddCount})`);
+      }
+    });
+
     setPredictions(newPredictions);
     setCurrentPage(0);
-    console.log('Predictions generated:', newPredictions);
+    console.log(`Predictions generated: ${newPredictions.length}`);
   }, [data, latestData, excludedNumbers, calculateMatchPercentage]);
 
   useEffect(() => {
@@ -299,7 +323,7 @@ function App() {
       case 'matchPercentage':
         sorted.sort((a, b) => {
           const aMatch = parseFloat(a[10]);
-          const bMatch = parseFloat(b[10]);
+          const bMatch = parseFloat(a[10]);
           return ascending ? aMatch - bMatch : bMatch - aMatch;
         });
         break;
